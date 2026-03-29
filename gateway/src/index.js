@@ -100,6 +100,27 @@ app.post("/api/dashboard", authMiddleware, async (req, res) => {
   }
 });
 
+app.post("/api/posts", authMiddleware, async (req, res) => {
+  const { platform = "", author = "", content = "", createdAt = "" } = req.body || {};
+
+  try {
+    const statResp = await axios.post(`${statUrl}/posts`, {
+      platform,
+      author,
+      content,
+      created_at: createdAt,
+    });
+    return res.status(201).json(statResp.data);
+  } catch (err) {
+    const status = err.response?.status || 500;
+    const detail = err.response?.data || err.message;
+    return res.status(status).json({
+      error: "Failed to insert post",
+      detail,
+    });
+  }
+});
+
 app.listen(port, () => {
   console.log(`gateway listening on :${port}`);
 });

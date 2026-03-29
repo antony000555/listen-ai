@@ -51,6 +51,17 @@ type StatsResponse struct {
 	Posts        []Post         `json:"posts"`
 }
 
+type InsertPostRequest struct {
+	Platform  string `json:"platform"`
+	Author    string `json:"author"`
+	Content   string `json:"content"`
+	CreatedAt string `json:"created_at"`
+}
+
+type InsertPostResponse struct {
+	ID int `json:"id"`
+}
+
 var stopWords = map[string]bool{
 	"the": true, "a": true, "an": true, "and": true, "or": true, "to": true,
 	"of": true, "in": true, "on": true, "for": true, "with": true, "is": true,
@@ -285,6 +296,18 @@ func writeJSON(w http.ResponseWriter, status int, payload interface{}) {
 	_ = json.NewEncoder(w).Encode(payload)
 }
 
+func normalizeCreatedAt(value string) (string, error) {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return time.Now().UTC().Format(time.RFC3339), nil
+	}
+	t, err := time.Parse(time.RFC3339, value)
+	if err != nil {
+		return "", fmt.Errorf("created_at must be RFC3339 format")
+	}
+	return t.UTC().Format(time.RFC3339), nil
+}
+
 func main() {
 	port := os.Getenv("STAT_PORT")
 	if port == "" {
@@ -349,6 +372,54 @@ func main() {
 			Posts:        posts,
 		}
 		writeJSON(w, http.StatusOK, resp)
+	})
+
+	http.HandleFunc("/posts", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
+			return
+		}
+
+		var req InsertPostRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request body"})
+			return
+		}
+
+		req.Platform = strings.TrimSpace(req.Platform)
+		req.Author = strings.TrimSpace(req.Author)
+		req.Content = strings.TrimSpace(req.Content)
+
+		if req.Platform == "" || req.Author == "" || req.Content == "" {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "platform, author, and content are required"})
+			return
+		}
+
+		createdAt, err := normalizeCreatedAt(req.CreatedAt)
+		if err != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+			return
+		}
+
+		result, err := db.Exec(
+			`INSERT INTO posts (platform, author, content, created_at) VALUES (?, ?, ?, ?)`,
+			req.Platform,
+			req.Author,
+			req.Content,
+			createdAt,
+		)
+		if err != nil {
+			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to insert post"})
+			return
+		}
+
+		id64, err := result.LastInsertId()
+		if err != nil {
+			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to retrieve inserted id"})
+			return
+		}
+
+		writeJSON(w, http.StatusCreated, InsertPostResponse{ID: int(id64)})
 	})
 
 	addr := ":" + port
