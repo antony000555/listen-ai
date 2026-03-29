@@ -1,4 +1,4 @@
-# Stat Service (Go + SQLite)
+# Stat Service
 
 This module filters posts and computes:
 

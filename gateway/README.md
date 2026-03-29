@@ -1,4 +1,4 @@
-# Gateway Service (Node.js)
+# Gateway Service
 
 This module handles authentication and orchestrates requests to stat and nlp services.
 

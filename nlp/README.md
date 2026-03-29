@@ -1,4 +1,4 @@
-# NLP Service (FastAPI)
+# NLP Service
 
 This module performs simple lexicon-based sentiment analysis for English and Traditional Chinese text.
 

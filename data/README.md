@@ -1,6 +1,6 @@
-# Data Folder
+# Data
 
-This folder contains the SQLite database and helper script for importing post data.
+This module contains the SQLite database and helper script for importing post data.
 
 ## Files
 

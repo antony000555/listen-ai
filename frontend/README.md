@@ -1,4 +1,4 @@
-# Frontend Service (Streamlit)
+# Frontend Service
 
 This module provides the dashboard UI for social listening.
 
