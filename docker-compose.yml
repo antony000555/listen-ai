@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  # 1. Stat (Go)
+  stat:
+    build: ./stat
+    ports:
+      - "8001:8001"
+    networks:
+      - listenai-network
+
+  # 2. NLP (Python)
+  nlp:
+    build: ./nlp
+    ports:
+      - "8002:8002"
+    networks:
+      - listenai-network
+
+  # 3. Gateway (Node.js)
+  gateway:
+    build: ./gateway
+    ports:
+      - "8000:8000"
+    networks:
+      - listenai-network
+    depends_on:
+      - stat
+      - nlp
+
+  # 4. Frontend (Python)
+  frontend:
+    build: ./frontend
+    ports:
+      - "8501:8501"
+    networks:
+      - listenai-network
+    depends_on:
+      - gateway
+
+networks:
+  listenai-network:
+    driver: bridge
