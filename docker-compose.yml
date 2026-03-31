@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # 1. Stat (Go)
   stat:
@@ -8,6 +6,10 @@ services:
       - "8001:8001"
     networks:
       - listenai-network
+    volumes:
+      - ./data:/app/data
+    environment:
+      - SQLITE_PATH=/app/data/listenai.db
 
   # 2. NLP (Python)
   nlp:
@@ -27,6 +29,9 @@ services:
     depends_on:
       - stat
       - nlp
+    environment:
+      - STAT_URL=http://stat:8001
+      - NLP_URL=http://nlp:8002
 
   # 4. Frontend (Python)
   frontend:
@@ -37,6 +42,8 @@ services:
       - listenai-network
     depends_on:
       - gateway
+    environment:
+      - GATEWAY_URL=http://gateway:8000
 
 networks:
   listenai-network:
