@@ -8,7 +8,7 @@ import streamlit as st
 
 st.set_page_config(page_title="Listen AI Dashboard", layout="wide")
 
-GATEWAY_URL = os.getenv("GATEWAY_URL", "http://localhost:8000")
+GATEWAY_URL = os.getenv("GATEWAY_URL", "http://gateway:8000")
 
 if "token" not in st.session_state:
     st.session_state.token = None

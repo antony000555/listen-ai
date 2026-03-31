@@ -8,8 +8,8 @@ dotenv.config();
 
 const app = express();
 const port = process.env.GATEWAY_PORT || 8000;
-const statUrl = process.env.STAT_URL || "http://localhost:8002";
-const nlpUrl = process.env.NLP_URL || "http://localhost:8001";
+const statUrl = process.env.STAT_URL || "http://stat:8002";
+const nlpUrl = process.env.NLP_URL || "http://nlp:8001";
 const jwtSecret = process.env.JWT_SECRET || "supersecret";
 const demoUser = process.env.DEMO_USER || "admin";
 const demoPass = process.env.DEMO_PASS || "admin123";

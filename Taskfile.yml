@@ -67,7 +67,7 @@ tasks:
     desc: Run frontend service
     dir: ./frontend
     env:
-      GATEWAY_URL: '{{default "http://localhost:8000" .GATEWAY_URL}}'
+      GATEWAY_URL: '{{default "http://gateway:8000" .GATEWAY_URL}}'
     cmds:
     - |
       PY_BIN="$(command -v python3.13 || command -v python3)"
