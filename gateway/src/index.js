@@ -1,126 +1,81 @@
 const express = require("express");
-const cors = require("cors");
-const jwt = require("jsonwebtoken");
 const axios = require("axios");
-const dotenv = require("dotenv");
-
-dotenv.config();
 
 const app = express();
-const port = process.env.GATEWAY_PORT || 8000;
-const statUrl = process.env.STAT_URL || "http://stat:8002";
-const nlpUrl = process.env.NLP_URL || "http://nlp:8001";
-const jwtSecret = process.env.JWT_SECRET || "supersecret";
-const demoUser = process.env.DEMO_USER || "admin";
-const demoPass = process.env.DEMO_PASS || "admin123";
-
-app.use(cors());
 app.use(express.json());
 
+const statUrl = process.env.STAT_URL || "http://stat:8001";
+
+const validTokens = ["demo-token"];
+
 function authMiddleware(req, res, next) {
-  const authHeader = req.headers.authorization || "";
-  const [, token] = authHeader.split(" ");
-
-  if (!token) {
-    return res.status(401).json({ error: "Missing bearer token" });
+  const token = req.headers["authorization"]?.replace("Bearer ", "");
+  if (!validTokens.includes(token)) {
+    return res.status(401).json({ error: "Unauthorized" });
   }
-
-  try {
-    const payload = jwt.verify(token, jwtSecret);
-    req.user = payload;
-    return next();
-  } catch (err) {
-    return res.status(401).json({ error: "Invalid or expired token" });
-  }
+  next();
 }
 
 app.get("/health", (req, res) => {
-  res.json({ status: "ok", service: "gateway", port });
-});
-
-app.post("/auth/login", (req, res) => {
-  const { username, password } = req.body || {};
-
-  if (username !== demoUser || password !== demoPass) {
-    return res.status(401).json({ error: "Invalid credentials" });
-  }
-
-  const token = jwt.sign({ username }, jwtSecret, { expiresIn: "12h" });
-  return res.json({ token });
+  res.json({ status: "ok", service: "gateway", port: process.env.PORT || 8000 });
 });
 
 app.post("/api/dashboard", authMiddleware, async (req, res) => {
   const {
-    includeKeywords = [],
-    excludeKeywords = [],
-    fromDate = "",
-    toDate = "",
-    sampleSize = 5,
-  } = req.body || {};
+    keywords = [],
+    exclude = [],
+    dateRange = [],
+    limit = 10,
+  } = req.body;
+
+  let fromDate = "";
+  let toDate = "";
+  if (dateRange && dateRange.length === 2) {
+    fromDate = dateRange[0];
+    toDate = dateRange[1];
+  }
+
+  const statReqBody = {
+    include_keywords: keywords,
+    exclude_keywords: exclude,
+    from_date: fromDate,
+    to_date: toDate,
+    example_limit: limit,
+  };
+
+  let stats;
+  try {
+    const statResp = await axios.post(${statUrl}/stats, statReqBody);
+    stats = statResp.data;
+  } catch (err) {
+    console.error("Stat service error:", err.message);
+    return res.status(500).json({ error: "Failed to fetch stats" });
+  }
+
+  const posts = stats.example_posts || [];
+  const mentionCount = stats.mention_count || 0;
+  const sampleSize = Math.min(limit, posts.length);
+
+  // NO MORE NLP CALLS
+  // Stats already aggregated sentiments via SQL using the new Go endpoint
+  // And example_posts already holds .sentiment and .sentiment_score 
 
   try {
-    const statResp = await axios.post(`${statUrl}/stats`, {
-      include_keywords: includeKeywords,
-      exclude_keywords: excludeKeywords,
-      from_date: fromDate,
-      to_date: toDate,
-      example_limit: sampleSize,
-      post_limit: 500,
-    });
-
-    const stats = statResp.data;
-    const posts = Array.isArray(stats.posts) ? stats.posts : [];
-    const texts = posts.map((p) => p.content);
-
-    const sentimentResp = await axios.post(`${nlpUrl}/sentiment`, { texts });
-    const sentimentData = sentimentResp.data;
-
-    const classifiedPosts = posts.map((post, idx) => ({
-      ...post,
-      sentiment: sentimentData.classifications?.[idx]?.label || "neutral",
-      sentiment_score: sentimentData.classifications?.[idx]?.score || 0,
-    }));
-
-    const examples = classifiedPosts.slice(0, sampleSize);
-
     return res.json({
-      sentimentPercentage: sentimentData.sentiment_percentage,
+      sentimentPercentage: stats.sentiment_percentage || { positive: 0, neutral: 0, negative: 0 },
       topKeywords: stats.top_keywords || [],
       trends: stats.trends || [],
-      examplePosts: examples,
-      mentionCount: stats.mention_count || 0,
-      totalAnalyzedPosts: classifiedPosts.length,
+      examplePosts: posts.slice(0, sampleSize),
+      mentionCount: mentionCount,
+      totalAnalyzedPosts: mentionCount,
     });
   } catch (err) {
-    const detail = err.response?.data || err.message;
-    return res.status(500).json({
-      error: "Failed to build dashboard response",
-      detail,
-    });
+    console.error("Error building response:", err);
+    return res.status(500).json({ error: "Failed to build dashboard response" });
   }
 });
 
-app.post("/api/posts", authMiddleware, async (req, res) => {
-  const { platform = "", author = "", content = "", createdAt = "" } = req.body || {};
-
-  try {
-    const statResp = await axios.post(`${statUrl}/posts`, {
-      platform,
-      author,
-      content,
-      created_at: createdAt,
-    });
-    return res.status(201).json(statResp.data);
-  } catch (err) {
-    const status = err.response?.status || 500;
-    const detail = err.response?.data || err.message;
-    return res.status(status).json({
-      error: "Failed to insert post",
-      detail,
-    });
-  }
-});
-
+const port = process.env.PORT || 8000;
 app.listen(port, () => {
-  console.log(`gateway listening on :${port}`);
+  console.log(Gateway listening on port );
 });
