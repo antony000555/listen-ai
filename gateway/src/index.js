@@ -45,7 +45,7 @@ app.post("/api/dashboard", authMiddleware, async (req, res) => {
 
   let stats;
   try {
-    const statResp = await axios.post(${statUrl}/stats, statReqBody);
+    const statResp = await axios.post(`${statUrl}/stats`, statReqBody);
     stats = statResp.data;
   } catch (err) {
     console.error("Stat service error:", err.message);
@@ -55,10 +55,6 @@ app.post("/api/dashboard", authMiddleware, async (req, res) => {
   const posts = stats.example_posts || [];
   const mentionCount = stats.mention_count || 0;
   const sampleSize = Math.min(limit, posts.length);
-
-  // NO MORE NLP CALLS
-  // Stats already aggregated sentiments via SQL using the new Go endpoint
-  // And example_posts already holds .sentiment and .sentiment_score 
 
   try {
     return res.json({
@@ -77,5 +73,5 @@ app.post("/api/dashboard", authMiddleware, async (req, res) => {
 
 const port = process.env.PORT || 8000;
 app.listen(port, () => {
-  console.log(Gateway listening on port );
+  console.log(`Gateway listening on port ${port}`);
 });

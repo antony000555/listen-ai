@@ -136,7 +136,6 @@ func fetchStats(db *sql.DB, req StatsRequest) (*StatsResponse, error) {
     }
 
     // 3. Setup trends & sentiments aggregation through SQL GROUP BY
-    // Instead of querying everything, we let SQLite do the aggregation!
     trendRows, err := db.Query("SELECT substr(created_at, 1, 10) as date_str, COUNT(*) FROM posts WHERE "+whereSql+" GROUP BY date_str ORDER BY date_str ASC", whereParams...)
     var trends []TrendPoint
     if err == nil {
@@ -167,9 +166,7 @@ func fetchStats(db *sql.DB, req StatsRequest) (*StatsResponse, error) {
         sentimentMap["negative"] = float64(int((sentimentMap["negative"]/totalSentiments)*10000)) / 100
     }
 
-    // 4. Get top keywords using inverted index (post_tokens) + JOIN!
-    // This removes the need for memory regex!
-    // Since SQL JOIN might be heavy if NOT filtered, only do it if count > 0
+    // 4. Get top keywords using inverted index (post_tokens) + JOIN
     var keywords []KeywordCount
     if count > 0 {
         topTokensSql := "SELECT pt.token, COUNT(pt.token) as cnt FROM post_tokens pt INNER JOIN posts p ON pt.post_id = p.id WHERE " + whereSql + " GROUP BY pt.token ORDER BY cnt DESC LIMIT 50"

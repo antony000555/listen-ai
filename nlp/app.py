@@ -33,26 +33,21 @@ def classify_text(text: str) -> tuple[str, float]:
         
     return label, score
 
-
 class SentimentRequest(BaseModel):
     texts: list[str]
-
 
 class SentimentItem(BaseModel):
     text: str
     label: str
     score: float
 
-
 class SentimentResponse(BaseModel):
     sentiment_percentage: dict[str, float]
     classifications: list[SentimentItem]
 
-
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok", "service": "nlp", "port": os.getenv("NLP_PORT", "8001")}
-
 
 @app.post("/sentiment", response_model=SentimentResponse)
 def sentiment(req: SentimentRequest) -> SentimentResponse:
